@@ -31,7 +31,7 @@ type flag struct {
 }
 
 func (v *boolVal) set(b interface{}) {
-	*v = boolVal(b.(bool))
+	*v = b.(boolVal)
 }
 
 func (v *intVal) set(i interface{}) {
@@ -118,7 +118,6 @@ func parseShortFlag(i int) int {
 			t.set(!*t)
 		case *intVal:
 			if j != len(os.Args[i])-2 || len(os.Args[i:]) < 2 {
-				fmt.Fprintf(os.Stderr, "%d %d", j, len(os.Args[i:]))
 				fmt.Fprintf(os.Stderr,
 					"-%c must precede integer\n", r)
 				printUsageAndExit()
