@@ -150,7 +150,7 @@ func parseShortFlag(i int) int {
 			t.set(n)
 			return 1
 		case *stringVal:
-			if j != len(os.Args[i])-1 || len(os.Args[i:]) < 2 ||
+			if j != len(os.Args[i])-2 || len(os.Args[i:]) < 2 ||
 				isFlag(os.Args[i+1]) != notFlag {
 				fmt.Fprintf(os.Stderr,
 					"-%c must precede string\n", r)
