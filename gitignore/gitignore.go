@@ -58,9 +58,9 @@ func (i *Ignore) AppendStr(s string) error {
 	return nil
 }
 
-func Walk(root string, ign Ignore, b bool, fn filepath.WalkFunc) error {
+func Walk(root string, ign Ignore, inv bool, fn filepath.WalkFunc) error {
 	globFn := func(path string, info os.FileInfo, err error) error {
-		if ign.Match(path) == b {
+		if ign.Match(path) != inv {
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
