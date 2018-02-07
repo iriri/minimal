@@ -116,8 +116,14 @@ func String(val *string, baseVal string, usage string, long string,
 }
 
 func isFlag(s string) flagType {
+	if len(s) < 2 {
+		return notFlag
+	}
 	if s[0] == '-' {
 		if s[1] == '-' {
+			if len(s) < 4 {
+				return notFlag
+			}
 			return longFlag
 		}
 		return shortFlag
