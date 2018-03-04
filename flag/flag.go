@@ -1,13 +1,10 @@
-// Copyright 2018 iriri. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+// Copyright 2018 iriri. All rights reserved. Use of this source code is
+// governed by a BSD-style license which can be found in the LICENSE file.
 
-/*
-Package flag provides a very minimal command line flag parser. Both short
-flags (-s) and long flags (--long) are supported and short flags can be chained
-(-xvzf). Boolean and integer values can be set directly by this package;
-strings values can serve as a catch-all for anything else.
-*/
+// Package flag provides a very minimal command line flag parser. Both short
+// flags (-s) and long flags (--long) are supported. Short flags can be chained
+// (-xvzf). Boolean and integer values have first-class support; strings values
+// are intended to serve as a catch-all for anything else.
 package flag
 
 import (
@@ -15,14 +12,6 @@ import (
 	"os"
 	"sort"
 	"strconv"
-)
-
-type flagType int
-
-const (
-	notFlag flagType = iota
-	shortFlag
-	longFlag
 )
 
 type flagVal interface {
@@ -40,8 +29,18 @@ type flag struct {
 	short rune
 }
 
+type flagType uint
+
+const (
+	notFlag flagType = iota
+	shortFlag
+	longFlag
+)
+
+var osExit = os.Exit
+
 func (v *boolVal) set(b interface{}) {
-	*v = b.(boolVal)
+	*v = boolVal(b.(bool))
 }
 
 func (v *intVal) set(i interface{}) {
@@ -75,43 +74,63 @@ func (f flag) printUsageAndDelete() {
 // Bool defines a bool flag with the specified base value, usage text, and
 // long and/or short flags. The argument val points to where the value is
 // stored.
-func Bool(val *bool, baseVal bool, usage string, long string, short rune) {
+func Bool(val *bool, base bool, usage string, long string, short rune) {
 	f := flag{(*boolVal)(val), usage, long, short}
-	*val = baseVal
-	if short != 0 {
-		shortFlags[short] = f
+	*val = base
+	if len(long) == 1 {
+		fmt.Fprintf(
+			os.Stderr,
+			"single character flags cannot be declared as long\n")
+		osExit(1)
+		return
 	}
 	if long != "" {
 		longFlags[long] = f
+	}
+	if short != 0 {
+		shortFlags[short] = f
 	}
 }
 
 // Int defines an int flag with the specified base value, usage text, and
 // long and/or short flags. The argument val points to where the value is
 // stored.
-func Int(val *int, baseVal int, usage string, long string, short rune) {
+func Int(val *int, base int, usage string, long string, short rune) {
 	f := flag{(*intVal)(val), usage, long, short}
-	*val = baseVal
-	if short != 0 {
-		shortFlags[short] = f
+	*val = base
+	if len(long) == 1 {
+		fmt.Fprintf(
+			os.Stderr,
+			"single character flags cannot be declared as long\n")
+		osExit(1)
+		return
 	}
 	if long != "" {
 		longFlags[long] = f
+	}
+	if short != 0 {
+		shortFlags[short] = f
 	}
 }
 
 // String defines a string flag with the specified base value, usage text, and
 // long and/or short flags. The argument val points to where the value is
 // stored.
-func String(val *string, baseVal string, usage string, long string,
-	short rune) {
+func String(val *string, base string, usage string, long string, short rune) {
 	f := flag{(*stringVal)(val), usage, long, short}
-	*val = baseVal
-	if short != 0 {
-		shortFlags[short] = f
+	*val = base
+	if len(long) == 1 {
+		fmt.Fprintf(
+			os.Stderr,
+			"single character flags cannot be declared as long\n")
+		osExit(1)
+		return
 	}
 	if long != "" {
 		longFlags[long] = f
+	}
+	if short != 0 {
+		shortFlags[short] = f
 	}
 }
 
@@ -137,21 +156,24 @@ func parseShortFlag(i int) int {
 		if !ok {
 			fmt.Fprintf(os.Stderr, "invalid flag: -%c\n", r)
 			PrintUsageAndExit()
+			return 1
 		}
 		switch t := f.val.(type) {
 		case *boolVal:
-			t.set(!*t)
+			t.set(true)
 		case *intVal:
 			if j != len(os.Args[i])-2 || len(os.Args[i:]) < 2 {
 				fmt.Fprintf(os.Stderr,
 					"-%c must precede integer\n", r)
 				PrintUsageAndExit()
+				return 1
 			}
 			n, err := strconv.Atoi(os.Args[i+1])
 			if err != nil {
 				fmt.Fprintf(os.Stderr,
 					"-%c must precede integer\n", r)
 				PrintUsageAndExit()
+				return 1
 			}
 			t.set(n)
 			return 1
@@ -161,6 +183,7 @@ func parseShortFlag(i int) int {
 				fmt.Fprintf(os.Stderr,
 					"-%c must precede string\n", r)
 				PrintUsageAndExit()
+				return 1
 			}
 			t.set(os.Args[i+1])
 			return 1
@@ -174,21 +197,24 @@ func parseLongFlag(i int) int {
 	if !ok {
 		fmt.Fprintf(os.Stderr, "invalid flag: %s\n", os.Args[i])
 		PrintUsageAndExit()
+		return 1
 	}
 	switch t := f.val.(type) {
 	case *boolVal:
-		t.set(!*t)
+		t.set(true)
 	case *intVal:
 		if len(os.Args[i:]) < 2 {
 			fmt.Fprintf(os.Stderr,
-				"%c must precede integer\n", os.Args[i])
+				"%s must precede integer\n", os.Args[i])
 			PrintUsageAndExit()
+			return 1
 		}
 		n, err := strconv.Atoi(os.Args[i+1])
 		if err != nil {
 			fmt.Fprintf(os.Stderr,
-				"%c must precede integer\n", os.Args[i])
+				"%s must precede integer\n", os.Args[i])
 			PrintUsageAndExit()
+			return 1
 		}
 		t.set(n)
 		return 1
@@ -197,6 +223,7 @@ func parseLongFlag(i int) int {
 			fmt.Fprintf(os.Stderr, "%s must precede string\n",
 				os.Args[i])
 			PrintUsageAndExit()
+			return 1
 		}
 		t.set(os.Args[i+1])
 		return 1
@@ -241,5 +268,5 @@ func PrintUsageAndExit() {
 	for _, s := range longKeys {
 		longFlags[s].printUsageAndDelete()
 	}
-	os.Exit(0)
+	osExit(1)
 }
