@@ -71,12 +71,29 @@ func (f flag) printUsageAndDelete() {
 	}
 }
 
-// Bool defines a bool flag with the specified base value, usage text, and
-// long and/or short flags. The argument val points to where the value is
-// stored.
-func Bool(val *bool, base bool, usage string, long string, short rune) {
+// Bool defines a bool flag with the specified short and/or long variants, base
+// value, and usage text. The argument val points to where the value is stored.
+func Bool(val *bool, short rune, long string, base bool, usage string) {
+	if len(long) == 1 {
+		fmt.Fprintf(
+			os.Stderr,
+			"single character flags cannot be declared as long\n")
+		osExit(1)
+		return
+	}
 	f := flag{(*boolVal)(val), usage, long, short}
 	*val = base
+	if short != 0 {
+		shortFlags[short] = f
+	}
+	if long != "" {
+		longFlags[long] = f
+	}
+}
+
+// Int defines an int flag with the specified short and/or long variants, base
+// value, and usage text. The argument val points to where the value is stored.
+func Int(val *int, short rune, long string, base int, usage string) {
 	if len(long) == 1 {
 		fmt.Fprintf(
 			os.Stderr,
@@ -84,41 +101,20 @@ func Bool(val *bool, base bool, usage string, long string, short rune) {
 		osExit(1)
 		return
 	}
-	if long != "" {
-		longFlags[long] = f
-	}
-	if short != 0 {
-		shortFlags[short] = f
-	}
-}
-
-// Int defines an int flag with the specified base value, usage text, and
-// long and/or short flags. The argument val points to where the value is
-// stored.
-func Int(val *int, base int, usage string, long string, short rune) {
 	f := flag{(*intVal)(val), usage, long, short}
 	*val = base
-	if len(long) == 1 {
-		fmt.Fprintf(
-			os.Stderr,
-			"single character flags cannot be declared as long\n")
-		osExit(1)
-		return
+	if short != 0 {
+		shortFlags[short] = f
 	}
 	if long != "" {
 		longFlags[long] = f
-	}
-	if short != 0 {
-		shortFlags[short] = f
 	}
 }
 
-// String defines a string flag with the specified base value, usage text, and
-// long and/or short flags. The argument val points to where the value is
+// String defines a string flag with the specified short and/or long variants,
+// base value, and usage text. The argument val points to where the value is
 // stored.
-func String(val *string, base string, usage string, long string, short rune) {
-	f := flag{(*stringVal)(val), usage, long, short}
-	*val = base
+func String(val *string, short rune, long string, base string, usage string) {
 	if len(long) == 1 {
 		fmt.Fprintf(
 			os.Stderr,
@@ -126,11 +122,13 @@ func String(val *string, base string, usage string, long string, short rune) {
 		osExit(1)
 		return
 	}
-	if long != "" {
-		longFlags[long] = f
-	}
+	f := flag{(*stringVal)(val), usage, long, short}
+	*val = base
 	if short != 0 {
 		shortFlags[short] = f
+	}
+	if long != "" {
+		longFlags[long] = f
 	}
 }
 

@@ -20,12 +20,12 @@ type flagSet struct {
 var opt flagSet
 
 func initFlags() {
-	Bool(&opt.b, false, "bool flag", "bool", 'b')
-	String(&opt.fStr, "", "float64 flag", "f64", 'f')
-	Int(&opt.i, 0, "int flag", "int", 'i')
-	Int(&opt.j, 0, "int flag", "", 'j')
-	String(&opt.nStr, "", "uint64 flag", "", 'n')
-	String(&opt.s, "", "string flag", "str", 0)
+	Bool(&opt.b, 'b', "bool", false, "bool flag")
+	String(&opt.fStr, 'f', "f64", "", "float64 flag")
+	Int(&opt.i, 'i', "int", 0, "int flag")
+	Int(&opt.j, 'j', "", 0, "another int flag")
+	String(&opt.nStr, 'n', "", "", "uint64 flag")
+	String(&opt.s, 0, "s-t-r", "", "string flag")
 }
 
 func verify(expected flagSet) bool {
@@ -45,7 +45,7 @@ func TestEverything(t *testing.T) {
 		"0",
 		"-n",
 		"12345678901",
-		"--str",
+		"--s-t-r",
 		"lastFlag",
 		"firstArg",
 	}
@@ -76,21 +76,21 @@ func TestDeclareInvalidLongFlags(t *testing.T) {
 		exitCode = code
 	}
 	var b bool
-	Bool(&b, false, "", "b", 0)
+	Bool(&b, 0, "b", false, "")
 	if exitCode != 1 {
 		t.Fail()
 	}
 
 	var i int
 	exitCode = 0
-	Int(&i, 0, "", "i", 0)
+	Int(&i, 0, "i", 0, "")
 	if exitCode != 1 {
 		t.Fail()
 	}
 
 	var s string
 	exitCode = 0
-	String(&s, "", "", "s", 0)
+	String(&s, 0, "s", "", "")
 	if exitCode != 1 {
 		t.Fail()
 	}
