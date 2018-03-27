@@ -28,10 +28,6 @@ func initFlags() {
 	String(&opt.s, 0, "s-t-r", "", "string flag")
 }
 
-func verify(expected flagSet) bool {
-	return expected == opt
-}
-
 func TestEverything(t *testing.T) {
 	initFlags()
 	args := os.Args
@@ -64,7 +60,7 @@ func TestEverything(t *testing.T) {
 	}
 	opt.f, _ = strconv.ParseFloat(opt.fStr, 64)
 	opt.n, _ = strconv.ParseUint(opt.nStr, 10, 64)
-	if !verify(expected) {
+	if opt != expected {
 		t.Fail()
 	}
 	os.Args = args
