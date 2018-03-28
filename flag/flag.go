@@ -3,8 +3,9 @@
 
 // Package flag provides a very minimal command line flag parser. Both short
 // flags (-s) and long flags (--long) are supported. Short flags can be chained
-// (-xvzf). Boolean and integer values have first-class support; strings values
-// are intended to serve as a catch-all for anything else.
+// (-xvzf) and "--" is treated as the end of flags marker. Boolean and integer
+// values have first-class support; strings values are intended to serve as a
+// catch-all for anything else.
 package flag
 
 import (
@@ -19,7 +20,7 @@ type flagVal interface {
 }
 
 type boolVal bool
-type intVal int
+type int64Val int64
 type stringVal string
 
 type flag struct {
@@ -35,6 +36,7 @@ const (
 	notFlag flagType = iota
 	shortFlag
 	longFlag
+	endFlag
 )
 
 var osExit = os.Exit
@@ -43,8 +45,8 @@ func (v *boolVal) set(b interface{}) {
 	*v = boolVal(b.(bool))
 }
 
-func (v *intVal) set(i interface{}) {
-	*v = intVal(i.(int))
+func (v *int64Val) set(i interface{}) {
+	*v = int64Val(i.(int64))
 }
 
 func (v *stringVal) set(s interface{}) {
@@ -91,9 +93,10 @@ func Bool(val *bool, short rune, long string, base bool, usage string) {
 	}
 }
 
-// Int defines an int flag with the specified short and/or long variants, base
-// value, and usage text. The argument val points to where the value is stored.
-func Int(val *int, short rune, long string, base int, usage string) {
+// Int64 defines an int64 flag with the specified short and/or long variants,
+// base value, and usage text. The argument val points to where the value is
+// stored.
+func Int64(val *int64, short rune, long string, base int64, usage string) {
 	if len(long) == 1 {
 		fmt.Fprintf(
 			os.Stderr,
@@ -101,7 +104,7 @@ func Int(val *int, short rune, long string, base int, usage string) {
 		osExit(1)
 		return
 	}
-	f := flag{(*intVal)(val), usage, long, short}
+	f := flag{(*int64Val)(val), usage, long, short}
 	*val = base
 	if short != 0 {
 		shortFlags[short] = f
@@ -138,8 +141,8 @@ func isFlag(s string) flagType {
 	}
 	if s[0] == '-' {
 		if s[1] == '-' {
-			if len(s) < 4 {
-				return notFlag
+			if len(s) == 2 {
+				return endFlag
 			}
 			return longFlag
 		}
@@ -159,14 +162,14 @@ func parseShortFlag(i int) int {
 		switch t := f.val.(type) {
 		case *boolVal:
 			t.set(true)
-		case *intVal:
+		case *int64Val:
 			if j != len(os.Args[i])-2 || len(os.Args[i:]) < 2 {
 				fmt.Fprintf(os.Stderr,
 					"-%c must precede integer\n", r)
 				PrintUsageAndExit()
 				return 1
 			}
-			n, err := strconv.Atoi(os.Args[i+1])
+			n, err := strconv.ParseInt(os.Args[i+1], 10, 64)
 			if err != nil {
 				fmt.Fprintf(os.Stderr,
 					"-%c must precede integer\n", r)
@@ -176,8 +179,7 @@ func parseShortFlag(i int) int {
 			t.set(n)
 			return 1
 		case *stringVal:
-			if j != len(os.Args[i])-2 || len(os.Args[i:]) < 2 ||
-				isFlag(os.Args[i+1]) != notFlag {
+			if j != len(os.Args[i])-2 || len(os.Args[i:]) < 2 {
 				fmt.Fprintf(os.Stderr,
 					"-%c must precede string\n", r)
 				PrintUsageAndExit()
@@ -200,14 +202,14 @@ func parseLongFlag(i int) int {
 	switch t := f.val.(type) {
 	case *boolVal:
 		t.set(true)
-	case *intVal:
+	case *int64Val:
 		if len(os.Args[i:]) < 2 {
 			fmt.Fprintf(os.Stderr,
 				"%s must precede integer\n", os.Args[i])
 			PrintUsageAndExit()
 			return 1
 		}
-		n, err := strconv.Atoi(os.Args[i+1])
+		n, err := strconv.ParseInt(os.Args[i+1], 10, 64)
 		if err != nil {
 			fmt.Fprintf(os.Stderr,
 				"%s must precede integer\n", os.Args[i])
@@ -217,7 +219,7 @@ func parseLongFlag(i int) int {
 		t.set(n)
 		return 1
 	case *stringVal:
-		if len(os.Args[i:]) < 2 || isFlag(os.Args[i+1]) != notFlag {
+		if len(os.Args[i:]) < 2 {
 			fmt.Fprintf(os.Stderr, "%s must precede string\n",
 				os.Args[i])
 			PrintUsageAndExit()
@@ -229,9 +231,11 @@ func parseLongFlag(i int) int {
 	return 0
 }
 
-// Parse parses the command line flags from os.Args[firstFlag:] and returns
-// the index of the first non-flag command line argument. If Parse encounters
-// a flag that has not been defined PrintUsageAndExit will be called.
+// Parse parses the command line flags from os.Args[firstFlag:] and returns the
+// index of the first non-flag command line argument. If present, "--" is
+// treated as the end of flags marker and the index of the next argument is
+// returned. If Parse encounters a flag that has not been defined
+// PrintUsageAndExit will be called.
 func Parse(firstFlag int) int {
 	i := firstFlag
 	for ; i <= len(os.Args[firstFlag:]); i++ {
@@ -240,6 +244,8 @@ func Parse(firstFlag int) int {
 			i += parseShortFlag(i)
 		case longFlag:
 			i += parseLongFlag(i)
+		case endFlag:
+			return i + 1
 		default:
 			return i
 		}

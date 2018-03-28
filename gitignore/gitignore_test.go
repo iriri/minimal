@@ -1,6 +1,7 @@
 package gitignore
 
 import (
+	"fmt"
 	"os"
 	"testing"
 )
@@ -23,6 +24,7 @@ func TestEverything(t *testing.T) {
 			actual = append(actual, path)
 			return nil
 		})
+	fmt.Println(actual, expected)
 	if len(actual) != len(expected) {
 		t.Fail()
 		return

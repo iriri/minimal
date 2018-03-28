@@ -24,7 +24,7 @@ func New() Ignore {
 }
 
 // From creates a new list of globs and populates it with the contents of the
-// given file.
+// specified file.
 func From(fname string) (Ignore, error) {
 	ign := New()
 	err := ign.Append(fname)
@@ -41,7 +41,7 @@ func (ign *Ignore) AppendGlob(s string) error {
 	return nil
 }
 
-// Append appends the globs in the given file to the ignore list. Files are
+// Append appends the globs in the specified file to the ignore list. Files are
 // expected to have the same format as .gitignore files: every non-empty line
 // is expected to be a valid glob unless it starts with "#:.
 func (ign *Ignore) Append(fname string) error {
@@ -66,8 +66,8 @@ func (ign *Ignore) Append(fname string) error {
 	return nil
 }
 
-// Match returns whether any of the globs in the ignore list match the given
-// path.
+// Match returns whether any of the globs in the ignore list match the
+// specified path.
 func (ign Ignore) Match(path string) bool {
 	for _, g := range ign {
 		if (*g).Match(path) {
@@ -77,8 +77,8 @@ func (ign Ignore) Match(path string) bool {
 	return false
 }
 
-// Walk walks the file tree with the given root and calls walkFn on each file
-// or directory. Files and directories that match any of the globs in the
+// Walk walks the file tree with the specified root and calls walkFn on each
+// file or directory. Files and directories that match any of the globs in the
 // ignore list are skipped. This behavior can be inverted (i.e. non-matching
 // files and directories are skipped instead) by setting the argument inv to
 // true.
@@ -86,10 +86,12 @@ func (ign Ignore) Walk(root string, inv bool, walkFn filepath.WalkFunc) error {
 	return filepath.Walk(
 		root,
 		func(path string, info os.FileInfo, err error) error {
-			if ign.Match(filepath.Base(path)) != inv {
-				if info.IsDir() {
-					return filepath.SkipDir
-				}
+			b := filepath.Base(path)
+			if info.IsDir() &&
+				((ign.Match(b) || ign.Match(b+"/")) != inv) {
+				return filepath.SkipDir
+			}
+			if ign.Match(b) != inv {
 				return err
 			}
 			return walkFn(path, info, err)

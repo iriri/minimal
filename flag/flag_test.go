@@ -10,8 +10,8 @@ type flagSet struct {
 	b    bool
 	f    float64
 	fStr string
-	i    int
-	j    int
+	i    int64
+	j    int64
 	n    uint64
 	nStr string
 	s    string
@@ -22,8 +22,8 @@ var opt flagSet
 func initFlags() {
 	Bool(&opt.b, 'b', "bool", false, "bool flag")
 	String(&opt.fStr, 'f', "f64", "", "float64 flag")
-	Int(&opt.i, 'i', "int", 0, "int flag")
-	Int(&opt.j, 'j', "", 0, "another int flag")
+	Int64(&opt.i, 'i', "int", 0, "int flag")
+	Int64(&opt.j, 'j', "", 0, "another int flag")
 	String(&opt.nStr, 'n', "", "", "uint64 flag")
 	String(&opt.s, 0, "s-t-r", "", "string flag")
 }
@@ -77,9 +77,9 @@ func TestDeclareInvalidLongFlags(t *testing.T) {
 		t.Fail()
 	}
 
-	var i int
+	var i int64
 	exitCode = 0
-	Int(&i, 0, "i", 0, "")
+	Int64(&i, 0, "i", 0, "")
 	if exitCode != 1 {
 		t.Fail()
 	}
@@ -101,8 +101,8 @@ func TestShortCircuit(t *testing.T) {
 		t.Fail()
 	}
 
-	os.Args = []string{"test", "--a"}
-	if Parse(1) != 1 {
+	os.Args = []string{"test", "--", "a"}
+	if Parse(1) != 2 {
 		t.Fail()
 	}
 	os.Args = args
@@ -133,7 +133,7 @@ func TestInvalidFlag(t *testing.T) {
 	os.Args = args
 }
 
-func TestFlagAfterIntOrStrFlag(t *testing.T) {
+func TestFlagAfterInt64OrStrFlag(t *testing.T) {
 	initFlags()
 	args := os.Args
 	var exitCode int
@@ -157,7 +157,7 @@ func TestFlagAfterIntOrStrFlag(t *testing.T) {
 	os.Args = args
 }
 
-func TestInvalidIntAfterIntFlag(t *testing.T) {
+func TestInvalidInt64AfterInt64Flag(t *testing.T) {
 	initFlags()
 	args := os.Args
 	var exitCode int
@@ -181,7 +181,7 @@ func TestInvalidIntAfterIntFlag(t *testing.T) {
 	os.Args = args
 }
 
-func TestNothingAfterIntOrStrFlag(t *testing.T) {
+func TestNothingAfterInt64OrStrFlag(t *testing.T) {
 	initFlags()
 	args := os.Args
 	var exitCode int
