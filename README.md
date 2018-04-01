@@ -16,3 +16,8 @@ Package gitignore can be used to parse .gitignore-style files into globs that
 can be used to test against a certain string or selectively walk a file tree.
 Gobwas's glob package is used for matching because it is faster than using
 regexp, which is overkill, and supports globstars (**), unlike filepath.Match.
+
+## minimal/replaceright [![GoDoc](https://godoc.org/github.com/iriri/minimal/replaceright?status.svg)](https://godoc.org/github.com/iriri/minimal/replaceright)
+Package replaceright provides similar functionality to some of the standard
+library string replacement routines except they start from the right. Uses
+Boyer-Moore on longer strings.
