@@ -1,3 +1,4 @@
+testgitignore
 *.o
 
 *.out*
@@ -5,3 +6,4 @@
 aa
 bbb
 ccc/
+**/Makefile 

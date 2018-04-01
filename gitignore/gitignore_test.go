@@ -1,13 +1,12 @@
 package gitignore
 
 import (
-	"fmt"
 	"os"
 	"testing"
 )
 
 func TestEverything(t *testing.T) {
-	ign, err := From("testgitignore")
+	ign, err := FromAll("testgitignore")
 	if err != nil {
 		panic(err)
 	}
@@ -15,7 +14,13 @@ func TestEverything(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	expected := [...]string{"testfs", "testfs/test.ou", "testfs/testdir"}
+	expected := [...]string{
+		"testfs",
+		"testfs/eee",
+		"testfs/eee/ggg",
+		"testfs/test.ou",
+		"testfs/testdir",
+	}
 	actual := make([]string, 0, 3)
 	ign.Walk(
 		"testfs",
@@ -24,7 +29,6 @@ func TestEverything(t *testing.T) {
 			actual = append(actual, path)
 			return nil
 		})
-	fmt.Println(actual, expected)
 	if len(actual) != len(expected) {
 		t.Fail()
 		return
@@ -33,5 +37,16 @@ func TestEverything(t *testing.T) {
 		if actual[i] != expected[i] {
 			t.Fail()
 		}
+	}
+
+	ign, err = From("testgitignore")
+	if err != nil {
+		panic(err)
+	}
+	if !ign.Match("Makefile") {
+		t.Fail()
+	}
+	if !ign.Match("../../test/test/../../test/Makefile") {
+		t.Fail()
 	}
 }
