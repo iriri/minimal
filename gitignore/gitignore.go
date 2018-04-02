@@ -10,6 +10,7 @@ package gitignore
 
 import (
 	"bufio"
+	"errors"
 	"log"
 	"os"
 	"path/filepath"
@@ -35,7 +36,10 @@ func New() IgnoreList {
 func From(path string) (IgnoreList, error) {
 	ign := New()
 	err := ign.Append(path)
-	return ign, err
+	if err != nil {
+		return nil, err
+	}
+	return ign, nil
 }
 
 // FromAll creates a new ignore list and populates it with the contents of
@@ -44,7 +48,41 @@ func From(path string) (IgnoreList, error) {
 func FromAll(fname string) (IgnoreList, error) {
 	ign := IgnoreList(make([]ignore, 0, 4))
 	err := ign.AppendAll(fname)
-	return ign, err
+	if err != nil {
+		return nil, err
+	}
+	return ign, nil
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
+}
+
+func findGitRoot() (string, error) {
+	path := "."
+	for ; !fileExists(path + "/.git"); path = "../" + path {
+		if p, err := filepath.Abs(path); p == "/" || err != nil {
+			return "", errors.New("not in a git repository")
+		}
+	}
+	return path, nil
+}
+
+// FromGit finds the root directory of the current git repository and creates a
+// new ignore list with the contents of all .gitignore files in that git
+// repository.
+func FromGit() (IgnoreList, error) {
+	ign := IgnoreList(make([]ignore, 0, 4))
+	root, err := findGitRoot()
+	if err != nil {
+		return nil, err
+	}
+	err = ign.appendAll(".gitignore", root)
+	if err != nil {
+		return nil, err
+	}
+	return ign, nil
 }
 
 func clean(s string) string {
@@ -97,9 +135,9 @@ func (ign *IgnoreList) Append(path string) error {
 	return nil
 }
 
-func (ign *IgnoreList) AppendAll(fname string) error {
+func (ign *IgnoreList) appendAll(fname, root string) error {
 	err := filepath.Walk(
-		".",
+		root,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -110,6 +148,10 @@ func (ign *IgnoreList) AppendAll(fname string) error {
 			return nil
 		})
 	return err
+}
+
+func (ign *IgnoreList) AppendAll(fname string) error {
+	return ign.appendAll(fname, ".")
 }
 
 func (ign IgnoreList) match(path string, info os.FileInfo) bool {

@@ -49,4 +49,15 @@ func TestEverything(t *testing.T) {
 	if !ign.Match("../../test/test/../../test/Makefile") {
 		t.Fail()
 	}
+
+	ign, err = FromGit()
+	ign.Walk(
+		".",
+		false,
+		func(path string, info os.FileInfo, err error) error {
+			if path == "ignoredfile" {
+				t.Fail()
+			}
+			return nil
+		})
 }
