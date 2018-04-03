@@ -2,11 +2,16 @@ package gitignore
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
 func TestEverything(t *testing.T) {
-	ign, err := FromAll("testgitignore")
+	ign, err := New()
+	if err != nil {
+		panic(err)
+	}
+	err = ign.appendAll("testgitignore", ".")
 	if err != nil {
 		panic(err)
 	}
@@ -23,8 +28,7 @@ func TestEverything(t *testing.T) {
 	}
 	actual := make([]string, 0, 3)
 	ign.Walk(
-		"testfs",
-		false,
+		"../gitignore/testfs",
 		func(path string, info os.FileInfo, err error) error {
 			actual = append(actual, path)
 			return nil
@@ -52,12 +56,38 @@ func TestEverything(t *testing.T) {
 
 	ign, err = FromGit()
 	ign.Walk(
-		".",
-		false,
+		"../../minimal",
 		func(path string, info os.FileInfo, err error) error {
-			if path == "ignoredfile" {
+			if strings.Contains(path, "ignoredfile") {
 				t.Fail()
 			}
 			return nil
 		})
+	ign.Walk(
+		"../gitignore",
+		func(path string, info os.FileInfo, err error) error {
+			if strings.Contains(path, "ignoredfile") {
+				t.Fail()
+			}
+			return nil
+		})
+	ign.Walk(
+		"../gitignore/testfs",
+		func(path string, info os.FileInfo, err error) error {
+			if strings.Contains(path, "ignoredfile") {
+				t.Fail()
+			}
+			return nil
+		})
+	err = ign.Walk(
+		"../../../not_a_real_directory",
+		func(path string, info os.FileInfo, err error) error {
+			if strings.Contains(path, "ignoredfile") {
+				t.Fail()
+			}
+			return nil
+		})
+	if err == nil {
+		t.Fail()
+	}
 }
