@@ -55,7 +55,18 @@ func TestEverything(t *testing.T) {
 	}
 
 	ign, err = FromGit()
-	ign.Walk(
+	err = ign.Walk(
+		".",
+		func(path string, info os.FileInfo, err error) error {
+			if strings.Contains(path, "ignoredfile") {
+				t.Fail()
+			}
+			return nil
+		})
+	if err != nil {
+		t.Fail()
+	}
+	err = ign.Walk(
 		"../../minimal",
 		func(path string, info os.FileInfo, err error) error {
 			if strings.Contains(path, "ignoredfile") {
@@ -63,7 +74,10 @@ func TestEverything(t *testing.T) {
 			}
 			return nil
 		})
-	ign.Walk(
+	if err != nil {
+		t.Fail()
+	}
+	err = ign.Walk(
 		"../gitignore",
 		func(path string, info os.FileInfo, err error) error {
 			if strings.Contains(path, "ignoredfile") {
@@ -71,7 +85,10 @@ func TestEverything(t *testing.T) {
 			}
 			return nil
 		})
-	ign.Walk(
+	if err != nil {
+		t.Fail()
+	}
+	err = ign.Walk(
 		"../gitignore/testfs",
 		func(path string, info os.FileInfo, err error) error {
 			if strings.Contains(path, "ignoredfile") {
@@ -79,6 +96,9 @@ func TestEverything(t *testing.T) {
 			}
 			return nil
 		})
+	if err != nil {
+		t.Fail()
+	}
 	err = ign.Walk(
 		"../../../not_a_real_directory",
 		func(path string, info os.FileInfo, err error) error {

@@ -12,6 +12,7 @@ import (
 	"bufio"
 	"errors"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -50,8 +51,7 @@ func From(path string) (*IgnoreList, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = ign.Append(path)
-	if err != nil {
+	if err = ign.append(path, nil); err != nil {
 		return nil, err
 	}
 	return ign, nil
@@ -65,8 +65,7 @@ func FromGit() (*IgnoreList, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = ign.AppendGit()
-	if err != nil {
+	if err = ign.AppendGit(); err != nil {
 		return nil, err
 	}
 	return ign, nil
@@ -103,6 +102,10 @@ func toRelpath(s string, root, cwd []string) string {
 			break
 		}
 	}
+	if i == min && len(cwd) == len(root) {
+		return "."
+	}
+
 	ss := make([]string, (len(cwd)-i)+(len(root)-i))
 	j := 0
 	for ; j < len(cwd)-i; j++ {
@@ -130,9 +133,7 @@ func (ign *IgnoreList) AppendGlob(s string) error {
 	return ign.appendGlob(s, nil)
 }
 
-// Append appends the globs in the specified file to the ignore list. Files are
-// expected to have the same format as .gitignore files.
-func (ign *IgnoreList) Append(path string) error {
+func (ign *IgnoreList) append(path string, root []string) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
@@ -143,8 +144,7 @@ func (ign *IgnoreList) Append(path string) error {
 	if err != nil {
 		return err
 	}
-	var root []string
-	if dir != fromSplit(ign.cwd) {
+	if root == nil && dir != fromSplit(ign.cwd) {
 		root = toSplit(dir)
 	}
 	scn := bufio.NewScanner(bufio.NewReader(f))
@@ -153,22 +153,27 @@ func (ign *IgnoreList) Append(path string) error {
 		if s == "" || s[0] == '#' {
 			continue
 		}
-		err = ign.appendGlob(s, root)
-		if err != nil {
+		if err = ign.appendGlob(s, root); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func fileExists(path string) bool {
+// Append appends the globs in the specified file to the ignore list. Files are
+// expected to have the same format as .gitignore files.
+func (ign *IgnoreList) Append(path string) error {
+	return ign.append(path, nil)
+}
+
+func exists(path string) bool {
 	_, err := os.Stat(path)
 	return !os.IsNotExist(err)
 }
 
 func findGitRoot(cwd []string) (string, error) {
 	p := fromSplit(cwd)
-	for !fileExists(p + "/.git") {
+	for !exists(p + "/.git") {
 		if len(cwd) == 1 {
 			return "", errors.New("not in a git repository")
 		}
@@ -179,33 +184,40 @@ func findGitRoot(cwd []string) (string, error) {
 }
 
 func (ign *IgnoreList) appendAll(fname, root string) error {
-	err := filepath.Walk(
+	return filepath.Walk(
 		root,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
 			if filepath.Base(path) == fname {
-				ign.Append(path)
+				ign.append(path, nil)
 			}
 			return nil
 		})
-	return err
 }
 
 // AppendGit finds the root directory of the current git repository and appends
 // the contents of all .gitignore files in that git repository to the ignore
 // list.
 func (ign *IgnoreList) AppendGit() error {
-	root, err := findGitRoot(ign.cwd)
+	gitRoot, err := findGitRoot(ign.cwd)
 	if err != nil {
 		return err
 	}
-	err = ign.appendAll(".gitignore", root)
+	if err = ign.appendGlob(".git", nil); err != nil {
+		return err
+	}
+	usr, err := user.Current()
 	if err != nil {
 		return err
 	}
-	return nil
+	if gg := filepath.Join(usr.HomeDir, ".gitignore_global"); exists(gg) {
+		if err = ign.append(gg, toSplit(gitRoot)); err != nil {
+			return err
+		}
+	}
+	return ign.appendAll(".gitignore", gitRoot)
 }
 
 func (ign *IgnoreList) match(path string, info os.FileInfo) bool {
