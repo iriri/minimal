@@ -1,1 +1,1 @@
-module "github.com/iriri/minimal/color"
+module github.com/iriri/minimal/color

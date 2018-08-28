@@ -1,1 +1,1 @@
-module "github.com/iriri/minimal/flag"
+module github.com/iriri/minimal/flag

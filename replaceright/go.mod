@@ -1,1 +1,1 @@
-module "github.com/iriri/minimal/replaceright"
+module github.com/iriri/minimal/replaceright
